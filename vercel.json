@@ -1,5 +1,5 @@
 {
-    "buildCommand": "bash apps/web/build.sh",
+    "buildCommand": "bash build.sh",
     "installCommand": "pnpm install --no-frozen-lockfile",
-    "outputDirectory": "apps/web/.next"
+    "outputDirectory": ".next"
 }
