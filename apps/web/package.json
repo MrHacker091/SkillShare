@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
+    "vercel-build": "cd ../.. && pnpm install && cd packages/database && pnpm prisma generate && cd ../../apps/web && next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
