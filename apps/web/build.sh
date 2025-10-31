@@ -1,10 +1,13 @@
-# SkillShare Vercel Build Script
+#!/bin/bash
+set -e
 
 echo "🔧 Starting SkillShare build process..."
 
-# Install all dependencies from root
-echo "📦 Installing dependencies..."
+# Go to root directory
 cd ../..
+
+# Install all dependencies
+echo "📦 Installing dependencies..."
 pnpm install --no-frozen-lockfile
 
 # Generate Prisma Client

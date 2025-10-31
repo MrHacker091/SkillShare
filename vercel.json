@@ -1,5 +1,5 @@
 {
-    "buildCommand": "pnpm install && cd packages/database && pnpm prisma generate && cd ../../apps/web && pnpm build",
+    "buildCommand": "bash apps/web/build.sh",
     "installCommand": "pnpm install --no-frozen-lockfile",
     "outputDirectory": "apps/web/.next"
 }
