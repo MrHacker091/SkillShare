@@ -1,0 +1,32 @@
+{
+  "name": "skillshare-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A marketplace platform for students to showcase and sell their work",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean",
+    "db:generate": "cd packages/database && pnpm prisma generate",
+    "db:migrate": "cd packages/database && pnpm prisma migrate dev",
+    "db:studio": "cd packages/database && pnpm prisma studio",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "devDependencies": {
+    "turbo": "^1.13.3",
+    "prettier": "^3.0.3",
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

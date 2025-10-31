@@ -1,0 +1,17 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "buildCommand": "pnpm install && cd apps/web && pnpm build",
+    "outputDirectory": "apps/web/.next",
+    "devCommand": "cd apps/web && pnpm dev",
+    "installCommand": "pnpm install",
+    "framework": "nextjs",
+    "regions": [
+        "sin1"
+    ],
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/apps/web/$1"
+        }
+    ]
+}

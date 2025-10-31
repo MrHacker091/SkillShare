@@ -1,0 +1,29 @@
+{
+  "name": "@skillshare/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./index.ts",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1",
+    "@supabase/supabase-js": "^2.76.1",
+    "dotenv": "^16.3.1",
+    "prisma": "^5.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "folders": [
+    {
+      "name": "🏠 Root",
+      "path": "."
+    },
+    {
+      "name": "🌐 Web App",
+      "path": "./apps/web"
+    },
+    {
+      "name": "🔌 API Server",
+      "path": "./apps/api"
+    },
+    {
+      "name": "💾 Database",
+      "path": "./packages/database"
+    }
+  ],
+  "settings": {
+    "typescript.preferences.includePackageJsonAutoImports": "on",
+    "typescript.suggest.autoImports": true,
+    "typescript.updateImportsOnFileMove.enabled": "always"
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.vscode-typescript-next",
+      "bradlc.vscode-tailwindcss",
+      "prisma.prisma",
+      "esbenp.prettier-vscode"
+    ]
+  }
+}

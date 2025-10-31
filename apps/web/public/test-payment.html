@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment System Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .success { border-color: #4CAF50; background-color: #f1f8e9; }
+        .error { border-color: #f44336; background-color: #ffebee; }
+        .pending { border-color: #ff9800; background-color: #fff3e0; }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #1976D2; }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+        }
+        .method-card {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-completed { background: #d1edff; color: #0c5460; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🇵🇰 Pakistani Payment System Test</h1>
+        <p>Testing SadaPay, JazzCash, EasyPaisa integration with PKR currency support</p>
+        
+        <div class="test-section" id="methods-section">
+            <h2>📋 Available Payment Methods</h2>
+            <button onclick="testPaymentMethods()">Load Payment Methods</button>
+            <div id="methods-result"></div>
+        </div>
+
+        <div class="test-section" id="wallet-section">
+            <h2>💰 Wallet Management</h2>
+            <button onclick="testWallet()">Check Test Wallet</button>
+            <div id="wallet-result"></div>
+        </div>
+
+        <div class="test-section" id="payment-section">
+            <h2>💳 Payment Processing</h2>
+            <button onclick="testPayment()">Create Test Payment</button>
+            <div id="payment-result"></div>
+        </div>
+
+        <div class="test-section" id="withdrawal-section">
+            <h2>💸 Withdrawal System</h2>
+            <button onclick="testWithdrawal()">Test Withdrawal</button>
+            <div id="withdrawal-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Test Log</h2>
+            <button onclick="clearLog()">Clear Log</button>
+            <div class="log" id="test-log"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : type === 'warning' ? 'orange' : 'black';
+            logDiv.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('test-log').innerHTML = '';
+        }
+
+        async function testPaymentMethods() {
+            try {
+                log('🧪 Testing payment methods API...', 'info');
+                const response = await fetch('/api/payments?action=methods');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Payment methods loaded successfully', 'success');
+                    let html = '<h3>Available Methods:</h3>';
+                    data.paymentMethods.forEach(method => {
+                        html += `
+                            <div class="method-card">
+                                <strong>${method.name}</strong> (${method.type})<br>
+                                <small>Fee: ${method.fees.percentage}% + PKR ${method.fees.fixed}</small><br>
+                                <span class="status-badge ${method.isAvailable ? 'status-completed' : 'status-failed'}">
+                                    ${method.isAvailable ? 'Available' : 'Unavailable'}
+                                </span>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('methods-result').innerHTML = html;
+                    document.getElementById('methods-section').className = 'test-section success';
+                } else {
+                    throw new Error(data.error || 'Failed to load payment methods');
+                }
+            } catch (error) {
+                log(`❌ Payment methods test failed: ${error.message}`, 'error');
+                document.getElementById('methods-section').className = 'test-section error';
+            }
+        }
+
+        async function testWallet() {
+            try {
+                log('🧪 Testing wallet API...', 'info');
+                const response = await fetch('/api/payments?action=wallet&userId=test_user');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Wallet data retrieved successfully', 'success');
+                    const wallet = data.wallet;
+                    let html = `
+                        <h3>Wallet Information:</h3>
+                        <div class="method-card">
+                            <strong>Balance: PKR ${wallet.balance.toLocaleString()}</strong><br>
+                            <small>Currency: ${wallet.currency}</small><br>
+                            <small>Transactions: ${wallet.transactions.length}</small>
+                        </div>
+                    `;
+                    document.getElementById('wallet-result').innerHTML = html;
+                    document.getElementById('wallet-section').className = 'test-section success';
+                } else {
+                    throw new Error(data.error || 'Failed to load wallet');
+                }
+            } catch (error) {
+                log(`❌ Wallet test failed: ${error.message}`, 'error');
+                document.getElementById('wallet-section').className = 'test-section error';
+            }
+        }
+
+        async function testPayment() {
+            try {
+                log('🧪 Testing payment creation...', 'info');
+                document.getElementById('payment-section').className = 'test-section pending';
+                
+                const response = await fetch('/api/payments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'create_payment',
+                        userId: 'test_user',
+                        projectId: 'test_project_1',
+                        creatorId: 'test_creator_1',
+                        amount: 1400, // PKR 1400
+                        paymentMethodId: 'sadapay',
+                        phoneNumber: '03001234567',
+                        description: 'Test payment for project'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log('✅ Payment created successfully', 'success');
+                    const payment = data.payment;
+                    let html = `
+                        <h3>Payment Created:</h3>
+                        <div class="method-card">
+                            <strong>Payment ID: ${payment.id}</strong><br>
+                            <strong>Amount: PKR ${payment.amount.toLocaleString()}</strong><br>
+                            <small>Fee: PKR ${payment.feeAmount}</small><br>
+                            <small>Total: PKR ${payment.totalAmount}</small><br>
+                            <small>Method: ${payment.paymentMethod}</small><br>
+                            <span class="status-badge status-${payment.status}">${payment.status.toUpperCase()}</span>
+                        </div>
+                    `;
+                    document.getElementById('payment-result').innerHTML = html;
+                    
+                    // Check status after 3 seconds
+                    setTimeout(async () => {
+                        await checkPaymentStatus(payment.id);
+                    }, 3500);
+                    
+                    document.getElementById('payment-section').className = 'test-section success';
+                } else {
+                    throw new Error(data.error || 'Failed to create payment');
+                }
+            } catch (error) {
+                log(`❌ Payment test failed: ${error.message}`, 'error');
+                document.getElementById('payment-section').className = 'test-section error';
+            }
+        }
+
+        async function checkPaymentStatus(paymentId) {
+            try {
+                log(`🔍 Checking payment status for ${paymentId}...`, 'info');
+                const response = await fetch('/api/payments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'check_status',
+                        paymentId: paymentId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const payment = data.payment;
+                    log(`📊 Payment status updated: ${payment.status}`, payment.status === 'completed' ? 'success' : 'info');
+                    
+                    // Update the payment result with new status
+                    const currentResult = document.getElementById('payment-result').innerHTML;
+                    const updatedResult = currentResult.replace(
+                        /status-badge status-\w+">(\w+)<\/span>/,
+                        `status-badge status-${payment.status}">${payment.status.toUpperCase()}</span>`
+                    );
+                    document.getElementById('payment-result').innerHTML = updatedResult;
+                    
+                    if (payment.status === 'completed') {
+                        log('🎉 Payment completed successfully!', 'success');
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to check payment status');
+                }
+            } catch (error) {
+                log(`❌ Payment status check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testWithdrawal() {
+            try {
+                log('🧪 Testing withdrawal system...', 'info');
+                document.getElementById('withdrawal-section').className = 'test-section pending';
+                
+                const response = await fetch('/api/payments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'withdraw',
+                        userId: 'test_creator_1', // Use creator who should have funds
+                        amount: 500,
+                        paymentMethodId: 'jazzcash',
+                        phoneNumber: '03009876543'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log('✅ Withdrawal request created successfully', 'success');
+                    const withdrawal = data.withdrawal;
+                    let html = `
+                        <h3>Withdrawal Request:</h3>
+                        <div class="method-card">
+                            <strong>Withdrawal ID: ${withdrawal.id}</strong><br>
+                            <strong>Amount: PKR ${withdrawal.amount.toLocaleString()}</strong><br>
+                            <small>Fee: PKR ${withdrawal.feeAmount}</small><br>
+                            <small>Net Amount: PKR ${withdrawal.netAmount}</small><br>
+                            <small>Method: ${withdrawal.paymentMethod}</small><br>
+                            <span class="status-badge status-${withdrawal.status}">${withdrawal.status.toUpperCase()}</span>
+                        </div>
+                    `;
+                    document.getElementById('withdrawal-result').innerHTML = html;
+                    document.getElementById('withdrawal-section').className = 'test-section success';
+                } else {
+                    throw new Error(data.error || 'Failed to create withdrawal');
+                }
+            } catch (error) {
+                log(`❌ Withdrawal test failed: ${error.message}`, 'error');
+                document.getElementById('withdrawal-section').className = 'test-section error';
+            }
+        }
+
+        // Auto-load payment methods on page load
+        window.onload = function() {
+            log('🚀 Payment System Test Page Loaded', 'info');
+            log('🇵🇰 Ready to test Pakistani payment integration', 'success');
+        };
+    </script>
+</body>
+</html>

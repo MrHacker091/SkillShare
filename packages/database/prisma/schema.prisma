@@ -1,0 +1,671 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== ENUMS =====
+
+enum UserRole {
+  CREATOR
+  CUSTOMER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum ProjectStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  IN_ESCROW
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REFUNDED
+  DISPUTED
+}
+
+enum CustomRequestStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TransactionType {
+  DEPOSIT
+  PURCHASE
+  SALE
+  PAYOUT
+  REFUND
+  COMMISSION
+  WITHDRAWAL
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum LicenseType {
+  PERSONAL
+  COMMERCIAL
+  EXTENDED
+  EXCLUSIVE
+}
+
+enum NotificationType {
+  ORDER
+  MESSAGE
+  PAYOUT
+  SYSTEM
+  MARKETING
+}
+
+// ===== MAIN MODELS =====
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String?  @unique
+  name      String?
+  bio       String?
+  avatar    String?
+  phone     String?
+  location  String?
+  website   String?
+  
+  role      UserRole @default(CUSTOMER)
+  status    UserStatus @default(ACTIVE)
+  
+  isVerified        Boolean @default(false)
+  emailVerified     DateTime?
+  phoneVerified     Boolean @default(false)
+  kycVerified       Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  accounts          Account[]
+  sessions          Session[]
+  creatorProfile    CreatorProfile?
+  
+  // Projects and Products
+  projects          Project[]
+  products          Product[]
+  
+  // Orders
+  ordersAsBuyer     Order[] @relation("BuyerOrders")
+  ordersAsSeller    Order[] @relation("SellerOrders")
+  
+  // Custom Requests
+  customRequests    CustomRequest[] @relation("CustomerRequests")
+  assignedRequests  CustomRequest[] @relation("CreatorRequests")
+  
+  // Wallet and Transactions
+  walletTransactions WalletTransaction[]
+  payouts           Payout[]
+  
+  // Reviews
+  reviewsGiven      Review[] @relation("ReviewerReviews")
+  reviewsReceived   Review[] @relation("RevieweeReviews")
+  
+  // Disputes
+  disputesInitiated Dispute[] @relation("InitiatorDisputes")
+  disputesReceived  Dispute[] @relation("DefendantDisputes")
+  
+  // Messages and Notifications
+  sentMessages      Message[] @relation("SenderMessages")
+  receivedMessages  Message[] @relation("ReceiverMessages")
+  notifications     Notification[]
+  
+  // Favorites and Follows
+  favoriteProducts  ProductFavorite[]
+  following         Follow[] @relation("FollowerFollows")
+  followers         Follow[] @relation("FolloweeFollows")
+  
+  proposalsSent     RequestProposal[]
+  disputeMessages   DisputeMessage[]
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model CreatorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  headline    String?
+  skills      String[] // Array of skills like ["React", "Node.js", "Python"]
+  experience  String?  // Years of experience
+  hourlyRate  Decimal? @db.Decimal(10, 2)
+  
+  // Portfolio stats
+  portfolioCount    Int @default(0)
+  totalSales        Int @default(0)
+  averageRating     Decimal? @db.Decimal(3, 2)
+  totalReviews      Int @default(0)
+  
+  // Verification badges
+  isVerifiedCreator Boolean @default(false)
+  badges            String[] // Array of achievement badges
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("creator_profiles")
+}
+
+model Category {
+  id          String @id @default(cuid())
+  name        String @unique
+  slug        String @unique
+  description String?
+  icon        String?
+  color       String?
+  parentId    String?
+  
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  projects    Project[]
+  products    Product[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("categories")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  description String        @db.Text
+  content     String?       @db.Text // Rich text content/documentation
+  
+  // Media
+  images      String[]      // Array of image URLs
+  thumbnail   String?       // Main thumbnail
+  demoUrl     String?       // Live demo URL
+  repoUrl     String?       // Repository URL (if open source)
+  
+  // Categorization
+  tags        String[]      // Array of tags
+  categoryId  String?
+  
+  // Settings
+  status      ProjectStatus @default(DRAFT)
+  visibility  Boolean       @default(true)
+  
+  // Stats
+  views       Int           @default(0)
+  likes       Int           @default(0)
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  category    Category?     @relation(fields: [categoryId], references: [id])
+  products    Product[]     // Products based on this project
+  
+  @@map("projects")
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  description String        @db.Text
+  
+  // Pricing
+  price       Decimal       @db.Decimal(10, 2)
+  currency    String        @default("USD")
+  
+  // Product details
+  version     String        @default("1.0.0")
+  changelog   String?       @db.Text
+  licenseType LicenseType   @default(PERSONAL)
+  
+  // Files and Downloads
+  files       Json          // Array of file objects with metadata
+  downloadCount Int         @default(0)
+  
+  // Inventory
+  stock       Int?          // null = unlimited
+  status      ProductStatus @default(ACTIVE)
+  
+  // Stats
+  views       Int           @default(0)
+  sales       Int           @default(0)
+  revenue     Decimal       @default(0) @db.Decimal(12, 2)
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  projectId   String?
+  project     Project?      @relation(fields: [projectId], references: [id])
+  
+  categoryId  String?
+  category    Category?     @relation(fields: [categoryId], references: [id])
+  
+  orders      OrderItem[]
+  favorites   ProductFavorite[]
+  
+  @@map("products")
+}
+
+model CustomRequest {
+  id          String              @id @default(cuid())
+  title       String
+  description String              @db.Text
+  
+  // Budget
+  budgetMin   Decimal?            @db.Decimal(10, 2)
+  budgetMax   Decimal?            @db.Decimal(10, 2)
+  currency    String              @default("USD")
+  
+  // Timeline
+  deadline    DateTime?
+  
+  // Attachments
+  attachments Json?               // Array of attachment objects
+  
+  status      CustomRequestStatus @default(OPEN)
+  
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  
+  // Relations
+  customerId  String
+  customer    User                @relation("CustomerRequests", fields: [customerId], references: [id])
+  
+  creatorId   String?
+  creator     User?               @relation("CreatorRequests", fields: [creatorId], references: [id])
+  
+  proposals   RequestProposal[]
+  orders      Order[]             @relation("CustomRequestOrders")
+  
+  @@map("custom_requests")
+}
+
+model RequestProposal {
+  id          String   @id @default(cuid())
+  message     String   @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @default("USD")
+  timeline    String?  // e.g., "2 weeks"
+  
+  isAccepted  Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  requestId   String
+  request     CustomRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id])
+  
+  @@map("request_proposals")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique // Human-readable order number
+  
+  // Amounts
+  subtotal    Decimal     @db.Decimal(10, 2)
+  commission  Decimal     @db.Decimal(10, 2)
+  total       Decimal     @db.Decimal(10, 2)
+  currency    String      @default("USD")
+  
+  status      OrderStatus @default(PENDING)
+  
+  // Payment details
+  stripePaymentId String?
+  paidAt         DateTime?
+  
+  // Completion
+  completedAt    DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  buyerId     String
+  buyer       User     @relation("BuyerOrders", fields: [buyerId], references: [id])
+  
+  sellerId    String
+  seller      User     @relation("SellerOrders", fields: [sellerId], references: [id])
+  
+  // Order can be for products OR custom request
+  items       OrderItem[]
+  
+  customRequestId String?
+  customRequest   CustomRequest? @relation("CustomRequestOrders", fields: [customRequestId], references: [id])
+  
+  // Additional relations
+  transactions    WalletTransaction[]
+  review          Review?
+  dispute         Dispute?
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  quantity  Int     @default(1)
+  price     Decimal @db.Decimal(10, 2)
+  
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  
+  @@map("order_items")
+}
+
+model WalletTransaction {
+  id          String            @id @default(cuid())
+  amount      Decimal           @db.Decimal(10, 2)
+  currency    String            @default("USD")
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  
+  description String?
+  metadata    Json?             // Additional transaction data
+  
+  // Balance after this transaction
+  balanceAfter Decimal?         @db.Decimal(12, 2)
+  
+  // External references
+  stripeTransactionId String?
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  
+  @@map("wallet_transactions")
+}
+
+model Payout {
+  id          String       @id @default(cuid())
+  amount      Decimal      @db.Decimal(10, 2)
+  currency    String       @default("USD")
+  status      PayoutStatus @default(PENDING)
+  
+  // Bank details
+  bankAccountId String?
+  
+  // External references
+  stripePayoutId String?
+  
+  // Failure reason
+  failureReason String?
+  
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  
+  @@map("payouts")
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  rating      Int      // 1-5 stars
+  title       String?
+  content     String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  reviewerId  String
+  reviewer    User     @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  
+  revieweeId  String
+  reviewee    User     @relation("RevieweeReviews", fields: [revieweeId], references: [id])
+  
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  
+  @@map("reviews")
+}
+
+model Dispute {
+  id          String        @id @default(cuid())
+  reason      String
+  description String        @db.Text
+  status      DisputeStatus @default(OPEN)
+  
+  // Resolution
+  resolution  String?       @db.Text
+  resolvedBy  String?       // Admin user ID
+  resolvedAt  DateTime?
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  orderId     String        @unique
+  order       Order         @relation(fields: [orderId], references: [id])
+  
+  initiatorId String
+  initiator   User          @relation("InitiatorDisputes", fields: [initiatorId], references: [id])
+  
+  defendantId String
+  defendant   User          @relation("DefendantDisputes", fields: [defendantId], references: [id])
+  
+  messages    DisputeMessage[]
+  
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  disputeId String
+  dispute   Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  
+  @@map("dispute_messages")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  isRead    Boolean  @default(false)
+  
+  // Attachments
+  attachments Json?
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  senderId    String
+  sender      User   @relation("SenderMessages", fields: [senderId], references: [id])
+  
+  receiverId  String
+  receiver    User   @relation("ReceiverMessages", fields: [receiverId], references: [id])
+  
+  // Optional: Link to order/request
+  orderId           String?
+  customRequestId   String?
+  
+  @@map("messages")
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  title       String
+  content     String           @db.Text
+  type        NotificationType
+  isRead      Boolean          @default(false)
+  
+  // Additional data
+  metadata    Json?
+  
+  createdAt   DateTime         @default(now())
+  
+  // Relations
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
+}
+
+model ProductFavorite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@map("product_favorites")
+}
+
+model Follow {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  followerId String
+  follower   User   @relation("FollowerFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  
+  followeeId String
+  followee   User   @relation("FolloweeFollows", fields: [followeeId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followeeId])
+  @@map("follows")
+}
+
+// ===== ADMIN MODELS =====
+
+model AdminSettings {
+  id              String  @id @default(cuid())
+  key             String  @unique
+  value           String
+  description     String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("admin_settings")
+}
+
+model Commission {
+  id          String  @id @default(cuid())
+  name        String
+  percentage  Decimal @db.Decimal(5, 2) // e.g., 5.00 for 5%
+  isDefault   Boolean @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("commissions")
+}
